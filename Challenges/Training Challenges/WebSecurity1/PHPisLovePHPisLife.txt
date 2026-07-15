@@ -1,0 +1,12 @@
+Quindi il tuo "schema" universale di iniezione è:
+}; TUO_PAYLOAD; //
+
+[Se è bloccato anche i commenti // allora scrivi questo if(1){ che funzionerà]
+
+->python Tools/xor.py
+Pero devi scrivere dentro il codice tutto cio che ti serve  ovvero 
+("var_dump", "00000000"), #HO 8 LETTERE A SINISTRA E VOGLIO 8 A DESTRA
+    ("getenv", "AAAAAA"),
+    ("FLAG", "1111")
+
+    

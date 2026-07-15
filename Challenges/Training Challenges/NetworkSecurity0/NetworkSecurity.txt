@@ -1,0 +1,90 @@
+[!TIPS]
+Ho evitato di riscrivere inizialmente sempre "make up" in caso di discontinuità di giornate tra una challenge e l'altra.
+In caso di problemi, "make down" e poi "make up"
+
+-> Network Security 0
+
+Apri il terminale ed entra nella directory dove sta il file che hai scaricato
+1. tar -xzvf challenge_files.tar.gz
+2. nvim makefile, scrivi da docker-compose a docker compose
+3. make up
+4. make logs
+
+-> Network Security 1
+
+1.1. docker compose down --remove-orphans 
+Abbatti l'ambiente difettoso e rimuovi eventuali container orfani
+1.2. docker network prune -f
+Ripulisci forzatamente le reti Docker inattive per azzerare lo stato
+1.3 make up
+Riavvia l'ambiente
+
+2. docker ps
+3. docker exec -it "names1-1" "path"
+4. exit
+
+-> Network Security 2
+
+1. nmap -sV "indirizzoIp"
+2. ssh root@"indirizzoIp"
+2.1 "yes"
+2.2 "ccit"
+3. exit
+
+-> Network Security 3
+
+1. docker exec "names1-1"  hostname -I
+2. ssh root@"indirizzoIp" (192.168.123.123)
+3. apri un nuovo termianle > nmap -p- "indirizzoIp"
+4. apri il broser e inserisci http://"indirizzoIp":"Porta" e fai sia con la porta 1 che la porta 2
+
+-> Network Security 4
+
+1. docker exec -it network-node1-1 /bin/bash
+2. ip addr -> vedi chi non ha "inet" impostato (senza indirizzoIp)
+2. ip addr add 10.0.0.1/24 dev eth1
+3. ip link set eth1 up
+4. ip addr show eth1 -> vedrai ora "inet" impostato
+5. new terminal:
+6. docker exec -it network-node2-1 /bin/bash
+7. ip addr
+8. ip addr add 10.0.0.2/24 dev eth0
+9. ip link set eth0 up
+10. ping -c2 192.168.100.100    # test su node1
+11. level4 -> su node1
+
+12. HOW TO READ THE FLAG:
+
+1) 10.0.0.1.2799 > 10.0.0.2.ssh : Flags [S],  seq 2254
+2) 10.0.0.2.ssh  > 10.0.0.1.2799: Flags [S.], seq 1944328249, ack 2255
+3) 10.0.0.1.2799 > 10.0.0.2.ssh : Flags [R],  seq 2255
+
+1) Pacchetto 1 — [S] = SYN: node1 (10.0.0.1) apre la connessione verso node2.
+Nota il formato IP.porta: 10.0.0.1.2799 significa sorgente = node1, porta 2799. 
+Destinazione 10.0.0.2.ssh → node2, porta ssh (cioè 22, tcpdump traduce il numero nel nome del servizio).
+2) Pacchetto 2 — [S.] = SYN-ACK: node2 risponde. (Il punto dopo la S è l'ACK.)
+3) Pacchetto 3 — [R] = RST: node1 resetta. 
+
+Tips: La porta effimera è a sinistra di ciò che leggi, ssh è una porta nota (converti a numero), l'ack è la risposta e ha un suo seq number che si aspetta quindi...
+
+-> Network Security 5
+
+# --- NODE1 (il gateway, fa il NAT) ---
+1.  docker exec -it downloads-node1-1 /bin/bash
+2.  ip addr                                    
+3.  ip addr add 10.0.0.1/24 dev eth1
+4.  ip link set eth1 up
+5.  iptables -t nat -A POSTROUTING -o eth0 --source 10.0.0.0/24 -j MASQUERADE
+6.  iptables -t nat -L POSTROUTING -n -v       # verifica
+
+# --- NODE2 (il client) — nuovo terminale ---
+7.  docker exec -it downloads-node2-1 /bin/bash
+8.  ip addr                                    # controllo interfacce
+9.  ip addr add 10.0.0.2/24 dev eth0
+10. ip link set eth0 up
+11. ip route add 192.168.123.0/24 via 10.0.0.1
+12. ping -c 2 10.0.0.1                          # test link node2<->node1
+13. ping -c 2 192.168.123.1                     # test end-to-end (deve funzionare grazie al NAT)
+14. level6                         
+
+-> roky a papaà leggi la cartella

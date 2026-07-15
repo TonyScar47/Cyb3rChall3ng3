@@ -1,0 +1,23 @@
+#--- Python FILES ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- VIRTUAL ENVIRONMENTS ---
+venv/
+env/
+.env/
+
+# --- SYSTEM FILES ---
+.DS_Store
+Thumbs.db
+
+# --- LOGS AND DEBUGGING ---
+*.logs
+*.tmp
+
+# --- CTF SPECIFIC FILES ---
+*.zip
+*.tar.gz
+*.rar
+*.7z

