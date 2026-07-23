@@ -1,204 +1,206 @@
 # NS_0.06 — Level6 — NAT1
 
-**Categoria:** Network Security
-**Difficoltà / punti:** 131 · 3 · 447
-**Autore:** enriquez
-
 ---
 
-## Descrizione del problema
+## Problem description
 
-L'ambiente è composto da tre container Docker (`node1`, `node2`, `node3`) su reti separate. `node1` è **dual-homed**: ha un piede sulla rete `10.0.0.0/24` (dove vive `node2`) e un piede sulla rete `192.168.123.0/24` (dove vive la destinazione `192.168.123.1`).
+Three Docker containers (`node1`, `node2`, `node3`) on separate networks. `node1` is
+**dual-homed**: one foot on `10.0.0.0/24` (where `node2` lives) and one on `192.168.123.0/24`
+(where the destination `192.168.123.1` lives).
 
-L'obiettivo: configurare il **NAT** su un nodo in modo che `node2` riesca a raggiungere `192.168.123.1`. La verifica si fa lanciando lo script `level6` su `node2`, che stampa la flag se tutto è a posto.
+Goal: configure **NAT** on a node so `node2` can reach `192.168.123.1`. Verification runs the
+`level6` script on `node2`, which prints the flag if everything is in place.
 
-La consegna fornisce il template del MASQUERADE (source NAT):
+The brief provides the MASQUERADE (source NAT) template:
 
-​```
+```
 iptables -t nat -A POSTROUTING -o [devicename] --source [sourcenet_ipaddress/netmask] -j MASQUERADE
-​```
+```
 
----
+## Recon
 
-## Ricognizione
+After `make up` the three containers are up (`downloads-node1-1`, `downloads-node2-1`,
+`downloads-node3-1`).
 
-Dopo `make up`, i tre container risultano attivi (`downloads-node1-1`, `downloads-node2-1`, `downloads-node3-1`).
+Fresh out of `make up`, the `node1` and `node2` interfaces are `UP` but have **no IP** (only
+`lo` has one). They need manual configuration.
 
-A container appena avviato, le interfacce di `node1` e `node2` sono `UP` ma **prive di indirizzo IP** (solo `lo` ha un IP). Vanno quindi configurate a mano.
+Starting state from `ip addr`:
 
-Situazione di partenza rilevata con `ip addr`:
+- `node1` -> `eth0` already has `192.168.123.123/24` (destination side); the other interface has no IP (`10.0.0.0/24` side).
+- `node2` -> both interfaces without IP.
 
-- `node1` → `eth0` ha già `192.168.123.123/24` (lato destinazione); l'altra interfaccia è senza IP (lato `10.0.0.0/24`).
-- `node2` → entrambe le interfacce senza IP.
+### Which interface to use
 
-### Il punto critico: quale interfaccia usare
+The container has **two** interfaces (`eth0`, `eth1`) and it's not obvious which sits on which
+network. The rule is **inspect before configuring**, never assume `eth0` blind.
 
-Il container ha **due** interfacce (`eth0`, `eth1`) e non è scontato quale stia su quale rete. La regola d'oro è **ispezionare sempre prima di configurare**, mai assumere `eth0` alla cieca.
+To map the virtual cables (veth pairs) I use the `@ifNN` index next to each interface: two
+interfaces with the **same** index are the two ends of the same cable.
 
-Per mappare i cavi virtuali (veth pair) uso l'indice `@ifNN` che compare accanto a ogni interfaccia: due interfacce con lo **stesso** indice sono i due capi dello stesso cavo.
-
-​```bash
-# su node1
+```bash
+# on node1
 ip -o link | grep -E 'eth0|eth1'
-# su node2
+# on node2
 ip -o link | grep -E 'eth0|eth1'
-​```
+```
 
-Esito (esempio di una sessione — **gli indici cambiano ad ogni `make up`**):
+Result (one session; the indices change on every `make up`):
 
-| Nodo  | Interfaccia | Indice   |
-|-------|-------------|----------|
-| node1 | eth0        | `@if26`  |
-| node1 | eth1        | `@if22`  |
-| node2 | eth0        | `@if22`  |
-| node2 | eth1        | `@if23`  |
+| Node  | Interface | Index   |
+|-------|-----------|---------|
+| node1 | eth0      | `@if26` |
+| node1 | eth1      | `@if22` |
+| node2 | eth0      | `@if22` |
+| node2 | eth1      | `@if23` |
 
-Accoppiando gli indici: **node1-`eth1` ↔ node2-`eth0`** (entrambi `if22`) sono i due capi dello stesso cavo. Questo è il collegamento diretto `node2 → node1` sulla rete `10.0.0.0/24`.
+Pairing the indices: **node1-`eth1` <-> node2-`eth0`** (both `if22`) are the two ends of the
+same cable. That's the direct `node2 -> node1` link on `10.0.0.0/24`.
 
-> ⚠️ Gli indici `@ifNN` (e a volte l'accoppiamento dei veth) **cambiano ad ogni `make down`/`make up`**. Non ci si può basare su una mappatura vista in una sessione precedente: va riverificata ogni volta.
+> ⚠️ The `@ifNN` indices (and sometimes the veth pairing itself) **change on every `make down`/`make up`**. You can't rely on a mapping from a previous session; reverify every time.
 
----
+## Analysis
 
-## Analisi della vulnerabilità / del meccanismo
+Two things to understand: one about the network, one hidden in the script.
 
-Due problemi da capire, uno di rete e uno "nascosto" nello script.
+### 1. The return-path problem (why NAT is needed)
 
-### 1. Il problema del percorso di ritorno (perché serve il NAT)
+Teaching `node2` the route to `192.168.123.0/24` (via `node1`) sends packets **out**, but that
+isn't enough. When the packet reaches `192.168.123.1`, its source is `10.0.0.2`. But
+`192.168.123.1` **has no route to `10.0.0.0/24`**: it doesn't know how to answer. The reply is
+lost and the connection stays half-open.
 
-Insegnare a `node2` la rotta verso `192.168.123.0/24` (via `node1`) fa partire i pacchetti in **andata**, ma non basta. Quando il pacchetto arriva a `192.168.123.1`, ha come sorgente `10.0.0.2`. Ma `192.168.123.1` **non ha alcuna rotta verso `10.0.0.0/24`**: non sa come rispondere. La risposta si perde e la connessione resta monca.
+**MASQUERADE** (source NAT) on `node1` fixes this: when `node1` forwards `node2`'s packets toward
+`192.168.123.x`, it rewrites the **source** address with its own IP on that network
+(`192.168.123.123`). So `192.168.123.1` replies to an address it can reach (`node1`), and
+`node1`, thanks to NAT connection tracking, hands the reply back to `node2`.
 
-Il **MASQUERADE** (source NAT) su `node1` risolve questo: quando `node1` inoltra i pacchetti di `node2` verso la rete `192.168.123.x`, riscrive l'indirizzo **sorgente** con il proprio IP su quella rete (`192.168.123.123`). Così `192.168.123.1` risponde a un indirizzo che sa raggiungere (`node1`), e `node1` — grazie al connection tracking del NAT — gira indietro la risposta a `node2`. Cerchio chiuso.
+### 2. The script's trick: `level6` reads `eth0`
 
-### 2. L'inganno dello script: `level6` legge `eth0`
+Pulling strings out of the `level6` binary (built with **Nuitka**, so it's an ELF wrapping a
+Python script `/src/level6.py`) with the `strings` substitute:
 
-Analizzando il binario `level6` (compilato con **Nuitka**, quindi è un ELF che impacchetta uno script Python `/src/level6.py`) con il sostituto di `strings`:
+```bash
+grep -a -oE '[[:print:]]{4,}' /path/level6
+```
 
-​```bash
-grep -a -oE '[[:print:]]{4,}' /percorso/level6
-​```
+telling strings show up:
 
-emergono stringhe rivelatrici:
+```
+socket / AF_INET / SOCK_DGRAM / ioctl / fcntl   -> reads an interface's IP
+eth0                                            -> ...and the interface is eth0 (hardcoded!)
+10.0.0.2                                        -> the expected src
+wrong host, sorry :(                            -> error if src doesn't match
+ICMP / icmp / sr1 / timeout / resp              -> sends an ICMP and waits for a reply
+Host {} seems unrecheable... sorry :(           -> error if no reply
+192.168.123.                                    -> target (last octet built at runtime)
+base64 / b64decode / ...ZstHVJN0Q...            -> target/flag obfuscated in base64
+```
 
-​```
-socket / AF_INET / SOCK_DGRAM / ioctl / fcntl   → legge l'IP di un'interfaccia
-eth0                                            → ... e l'interfaccia è eth0 (hardcoded!)
-10.0.0.2                                        → il src atteso
-wrong host, sorry :(                            → errore se il src non combacia
-ICMP / icmp / sr1 / timeout / resp             → invia un ICMP e aspetta risposta
-Host {} seems unrecheable... sorry :(          → errore se non arriva risposta
-192.168.123.                                    → target (ultimo ottetto costruito a runtime)
-base64 / b64decode / ...ZstHVJN0Q...           → target/flag offuscati in base64
-​```
+**Script logic:**
+1. Reads the IP of `node2`'s **`eth0`** interface via `ioctl`.
+2. If that IP is **not `10.0.0.2`** -> prints `wrong host, sorry :(` (or exits quietly).
+3. Sends an **ICMP** packet (`sr1`) to `192.168.123.1` and waits for a reply.
+4. If no reply -> `Host 192.168.123.1 seems unrecheable... sorry :(`.
 
-**Logica dello script:**
-1. Legge via `ioctl` l'IP dell'interfaccia **`eth0`** di `node2`.
-2. Se quell'IP **non è `10.0.0.2`** → stampa `wrong host, sorry :(` (o esce in silenzio).
-3. Invia un pacchetto **ICMP** (`sr1`) verso `192.168.123.1` e attende risposta.
-4. Se non arriva risposta → `Host 192.168.123.1 seems unrecheable... sorry :(`.
+This is the core of the trick: **the script is wired to read `eth0`.** So on `node2` the IP
+`10.0.0.2` has to sit on **`eth0`**, not on any other interface, even though the ping would work
+from any interface on the right network.
 
-Questo è il cuore dell'inganno: **lo script è cablato per leggere `eth0`.** Quindi su `node2` l'IP `10.0.0.2` deve stare **obbligatoriamente su `eth0`**, non su un'altra interfaccia — anche se il ping funzionerebbe comunque da qualunque interfaccia sulla rete giusta.
+### The two constraints together
 
-### La sintesi dei due vincoli
+Both must hold at once:
 
-Devono valere **contemporaneamente**:
+- **Script constraint:** `10.0.0.2` on `node2-eth0`.
+- **Physical constraint:** `node2-eth0` has to be the cable end connected to `node1`, and `node1` must have `10.0.0.1` on the twin end.
 
-- **Vincolo dello script:** `10.0.0.2` su `node2-eth0`.
-- **Vincolo fisico:** `node2-eth0` dev'essere il capo di cavo collegato a `node1`, e `node1` deve avere `10.0.0.1` sul capo gemello.
+The `@ifNN` check in recon is what confirms these two line up (node2-`eth0` <-> node1-`eth1`). If
+`make up` had wired `node2-eth0` to `node3`, the topology would be different and would need extra
+thought.
 
-La verifica degli `@ifNN` fatta in ricognizione serve proprio a confermare che questi due vincoli combacino (node2-`eth0` ↔ node1-`eth1`). Se `make up` avesse collegato `node2-eth0` a `node3`, la topologia sarebbe stata diversa e avrebbe richiesto un ragionamento aggiuntivo.
+## Exploit, step by step
 
----
+### Prerequisite: the `iptable_nat` kernel module
 
-## Exploit passo-passo
+In the containers the iptables `nat` table is often unavailable: the first `iptables -t nat`
+command answers with
 
-### Prerequisito: modulo kernel `iptable_nat`
-
-Nei container la tabella `nat` di iptables spesso non è disponibile: il primo comando `iptables -t nat` risponde con
-
-​```
+```
 can't initialize iptables table `nat`: Table does not exist (do you need to insmod?)
-​```
+```
 
-La tabella `nat` è fornita dal modulo kernel **`iptable_nat`**. Poiché i container **condividono il kernel dell'host**, il modulo va caricato **sull'host**, non nel container (nel container `modprobe` non è nemmeno presente).
+The `nat` table comes from the **`iptable_nat`** kernel module. Since containers **share the host
+kernel**, the module has to be loaded **on the host**, not in the container (`modprobe` isn't even
+present in the container).
 
-Sull'host (diventando root con `su -`, se `sudo` non è disponibile):
+On the host (becoming root with `su -` if `sudo` isn't available):
 
-​```bash
+```bash
 modprobe iptable_nat
-lsmod | grep -E 'iptable_nat|nf_nat'   # verifica
-​```
+lsmod | grep -E 'iptable_nat|nf_nat'   # verify
+```
 
-Una volta caricato sull'host, la tabella `nat` diventa utilizzabile **dentro tutti i container**.
+Once loaded on the host, the `nat` table becomes usable **inside all containers**.
 
-### Configurazione di node1 (il gateway / NAT)
+### node1 (the gateway / NAT)
 
-​```bash
+```bash
 docker exec -it downloads-node1-1 /bin/bash
 
-# eth0 ha già 192.168.123.123; assegno 10.0.0.1 al lato node2 (eth1, gemello di node2-eth0)
+# eth0 already has 192.168.123.123; assign 10.0.0.1 to the node2 side (eth1, twin of node2-eth0)
 ip addr add 10.0.0.1/24 dev eth1
 ip link set eth1 up
 
-# MASQUERADE: maschera i pacchetti provenienti da 10.0.0.0/24 in USCITA da eth0 (lato 192.168.123)
+# MASQUERADE: mask packets from 10.0.0.0/24 leaving via eth0 (192.168.123 side)
 iptables -t nat -A POSTROUTING -o eth0 --source 10.0.0.0/24 -j MASQUERADE
 
-# verifica della regola
-iptables -t nat -L POSTROUTING -n -v
-​```
+iptables -t nat -L POSTROUTING -n -v   # check the rule
+```
 
-> Nota su `-o eth0`: `-o` è l'interfaccia di **uscita**. Il pacchetto di node2 **entra** in node1 da `eth1` ed **esce** verso la destinazione da `eth0`. La regola POSTROUTING guarda il pacchetto un attimo prima che lasci la macchina, quindi il device corretto è quello di uscita (`eth0`), non quello di ingresso.
+On `-o eth0`: `-o` is the **outbound** interface. `node2`'s packet **enters** `node1` on `eth1`
+and **leaves** toward the destination on `eth0`. POSTROUTING looks at the packet just before it
+leaves the machine, so the right device is the exit one (`eth0`), not the entry one.
 
-### Configurazione di node2 (il client)
+### node2 (the client)
 
-​```bash
+```bash
 docker exec -it downloads-node2-1 /bin/bash
 
-# 10.0.0.2 DEVE stare su eth0 (è l'interfaccia che level6 legge)
+# 10.0.0.2 MUST go on eth0 (the interface level6 reads)
 ip addr add 10.0.0.2/24 dev eth0
 ip link set eth0 up
 
-# rotta verso la rete della destinazione, via il gateway node1
+# route to the destination network, via gateway node1
 ip route add 192.168.123.0/24 via 10.0.0.1
-​```
+```
 
-### Verifica e flag
+### Verify and flag
 
-​```bash
-ping -c 2 10.0.0.1        # link node2 <-> node1 (deve rispondere)
-ping -c 2 192.168.123.1   # end-to-end: funziona grazie al NAT
-level6                    # stampa la flag
-​```
+```bash
+ping -c 2 10.0.0.1        # node2 <-> node1 link (must answer)
+ping -c 2 192.168.123.1   # end-to-end: works thanks to NAT
+level6                    # prints the flag
+```
 
-Dettaglio utile visibile nel ping a `192.168.123.1`: il **`ttl=63`** (partito da 64, decrementato di 1) conferma che il pacchetto ha attraversato **un hop** — cioè è stato instradato e mascherato da `node1`. Anche il contatore `pkts` sulla riga `MASQUERADE` di `iptables -t nat -L -v` incrementa, prova che il NAT sta effettivamente lavorando.
-
----
+Useful detail in the ping to `192.168.123.1`: the **`ttl=63`** (started at 64, decremented by 1)
+confirms the packet crossed **one hop**, so it was routed and masqueraded by `node1`. The `pkts`
+counter on the `MASQUERADE` line of `iptables -t nat -L -v` also increments, proof the NAT is
+actually working.
 
 ## Flag
 
-​```
+```
 CCIT{****************}
-​```
+```
 
-*(offuscata — sostituire con il valore stampato da `level6`)*
+## What I learned
 
----
-
-## Cosa ho imparato
-
-- **Routing ≠ raggiungibilità.** Una rotta insegna solo la direzione di andata. Se l'host remoto non ha modo di rispondere alla rete sorgente, serve il **source NAT / masquerade** per rendere il traffico bidirezionale.
-- **MASQUERADE** riscrive dinamicamente il src con l'IP dell'interfaccia di uscita; il **connection tracking** (`nf_conntrack`) ricorda l'associazione per instradare correttamente le risposte.
-- Nei **container** i moduli kernel del NAT (`iptable_nat`) si caricano **sull'host**, perché il kernel è condiviso.
-- `-o` in POSTROUTING è l'interfaccia di **uscita** — errore classico è metterci quella di ingresso.
-- **Ispezionare sempre prima di configurare:** gli indici `@ifNN` mappano i veth pair e **cambiano ad ogni riavvio**. Mai assumere `eth0` alla cieca.
-- **Leggere il binario di verifica paga:** `level6` era cablato per leggere l'IP da `eth0`. Senza l'analisi delle stringhe, lo spostamento dell'IP su `eth0` sarebbe stato solo un tentativo alla cieca. Capire *cosa controlla* lo script trasforma il debug in un ragionamento.
-
----
-
-## Mitigazione
-
-In uno scenario reale, il masquerade è una funzionalità legittima (è ciò che fa un router domestico verso Internet), quindi la "mitigazione" va intesa come **hardening** del gateway:
-
-- **Restringere l'ambito del NAT:** limitare `--source` alla sola rete che deve realmente uscire, evitando `MASQUERADE` generici su `0.0.0.0/0`.
-- **Filtrare in FORWARD:** una regola `MASQUERADE` non basta a rendere sicuro il gateway; serve una policy `FORWARD` che consenta solo il traffico previsto (per interfaccia, sorgente, destinazione, porta).
-- **Preferire SNAT a IP fisso** (`-j SNAT --to-source`) quando l'IP di uscita è statico: è più prevedibile ed efficiente del MASQUERADE, che ricalcola l'IP ad ogni pacchetto.
-- **Disabilitare l'IP forwarding** (`net.ipv4.ip_forward=0`) sui nodi che non devono fare da router, per evitare inoltri involontari tra segmenti di rete.
+- A route only teaches the outbound direction: if the remote host can't answer my network, the
+  reply is lost and you need the MASQUERADE.
+- The veth `@ifNN` indices change on every `make up`. I trusted a mapping from an earlier session
+  and had `eth0`/`eth1` swapped, about twenty minutes wasted before reverifying them.
+- `level6` read the IP from `eth0` hardcoded: without pulling the strings I'd never have guessed
+  it, I'd have just tried at random.
+- In containers the NAT modules (`iptable_nat`) load on the host: the kernel is shared, `modprobe`
+  isn't even in the container.
+- `-o` in POSTROUTING is the outbound interface, not the inbound one.
