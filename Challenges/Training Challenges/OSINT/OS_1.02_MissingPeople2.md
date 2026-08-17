@@ -24,7 +24,7 @@ The challenge description notes that the original profile was taken down/removed
 ## Flag
 
 ```
-CCIT{****************}
+****************
 ```
 
 ## What I learned

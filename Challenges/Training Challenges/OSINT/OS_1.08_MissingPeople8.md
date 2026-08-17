@@ -52,7 +52,7 @@ The Pinterest profile that carries his personal signature (**Tony** + **87**, ma
 ## Flag
 
 ```
-CCIT{****************}
+****************
 ```
 
 ## What I learned

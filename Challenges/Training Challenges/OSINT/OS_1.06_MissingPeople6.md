@@ -57,7 +57,7 @@ who launched the fundraiser to find him.
 ## Flag
 
 ```
-CCIT{****************}
+****************
 ```
 
 ## What I learned

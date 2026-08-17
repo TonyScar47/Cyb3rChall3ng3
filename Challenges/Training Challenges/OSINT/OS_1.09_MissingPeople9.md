@@ -43,7 +43,7 @@ Both the handle evidence and the archived report agree: **July 1987**.
 ## Flag
 
 ```
-CCIT{****************}
+****************
 ```
 
 ## What I learned

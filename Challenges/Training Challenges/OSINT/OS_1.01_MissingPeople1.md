@@ -23,12 +23,10 @@ The attached `OSINT Challenges - README.pdf` specifies strict rules: purely pass
 #    https://www.instagram.com/<discovered_username>/
 ```
 
-> Double check if the platform accepts the raw URL (`[https://www.instagram.com/.../](https://www.instagram.com/.../)`) or if it requires wrapping it in the standard `CCIT{...}` container.
-
 ## Flag
 
 ```
-CCIT{****************}
+****************
 ```
 
 ## What I learned

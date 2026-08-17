@@ -4,7 +4,7 @@
 
 ## Problem description
 
-The challenge asks to find the numeric Facebook profile ID for Anthony Ginnetti. The flag format requires the raw numeric ID (`\d+`) wrapped inside the standard `CCIT{...}` container.
+The challenge asks to find the numeric Facebook profile ID for Anthony Ginnetti. The flag format requires the raw numeric ID (`\d+`).
 
 ## Recon
 
@@ -26,7 +26,7 @@ curl -s "https://www.facebook.com/KrzWhtboy/" | grep -oE 'entity_id":"[0-9]+"'
 ## Flag
 
 ```
-CCIT{****************}
+****************
 ```
 
 ## What I learned

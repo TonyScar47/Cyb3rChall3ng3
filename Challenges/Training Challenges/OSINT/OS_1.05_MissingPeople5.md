@@ -4,7 +4,7 @@
 
 ## Problem description
 
-The challenge requires finding the official website (`.com` domain extension) of the company where Anthony started working in 2018. The flag format requires the full URL (`[https://www.WEBSITENAME.com/](https://www.WEBSITENAME.com/)`) enclosed in the standard `CCIT{...}` wrapper.
+The challenge requires finding the official website (`.com` domain extension) of the company where Anthony started working in 2018. The flag format requires the full URL (`[https://www.WEBSITENAME.com/](https://www.WEBSITENAME.com/)`).
 
 ## Recon
 
@@ -28,7 +28,7 @@ The target company associated with 2018 is **Tim Hortons**.
 ## Flag
 
 ```
-CCIT{****************}
+****************
 ```
 
 ## What I learned

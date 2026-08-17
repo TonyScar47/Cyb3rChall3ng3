@@ -27,7 +27,7 @@ Using the target's full name (*Anthony Michael Ginnetti*) and previously discove
 ## Flag
 
 ```
-CCIT{****************}
+****************
 ```
 
 ## What I learned

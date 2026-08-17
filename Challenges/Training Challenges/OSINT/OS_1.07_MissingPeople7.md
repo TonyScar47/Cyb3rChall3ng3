@@ -53,7 +53,7 @@ The most recently updated profile is the **Libby Ginnetti-Roth** account, whose 
 ## Flag
 
 ```
-CCIT{****************}
+****************
 ```
 
 ## What I learned
