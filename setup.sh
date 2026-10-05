@@ -37,7 +37,7 @@ sudo pacman -Syu --noconfirm
 # --- 3. Core packages ---
 echo -e "${GREEN}[*] Installing dev + security packages...${NC}"
 DEV_CORE=(base-devel git neovim zsh python python-pip python-sympy cmake curl tmux zip unzip firefox)
-SEC_SUITE=(nmap wireshark-qt tcpdump sqlmap john hashcat gdb strace ltrace radare2 binwalk openbsd-netcat ghidra)
+SEC_SUITE=(nmap wireshark-qt tcpdump sqlmap hashcat gdb strace ltrace openbsd-netcat ghidra)
 
 sudo pacman -S --needed --noconfirm "${DEV_CORE[@]}" "${SEC_SUITE[@]}"
 

